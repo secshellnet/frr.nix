@@ -1,0 +1,108 @@
+{ lib, config, ... }:
+let
+  cfg = config.services.frr.settings.prefix-list;
+  inherit (lib) mkOption types;
+  attrsWith' =
+    placeholder: elemType:
+    types.attrsWith {
+      inherit elemType placeholder;
+    };
+in
+{
+  options.services.frr.settings.prefix-list = mkOption {
+    type = attrsWith' "afi" (
+      attrsWith' "name" (
+        attrsWith' "seq" (
+          attrsWith' "action" (
+            types.submodule ({
+              options = {
+                comments = mkOption {
+                  type = types.lines;
+                  default = "";
+                  example = "define own prefixes";
+                  description = ''
+                    String that are being added as comments before the route-map.
+                  '';
+                };
+                prefix = mkOption {
+                  type = types.str;
+                  description = ''
+                    The prefix.
+                  '';
+                };
+                le = mkOption {
+                  type = with types; nullOr ints.u8;
+                  default = null;
+                  example = 24;
+                  description = ''
+                    Specifies prefix length. The prefix list will be applied if
+                    the prefix length is less than or equal to the le prefix length.
+                  '';
+                };
+                ge = mkOption {
+                  type = with types; nullOr ints.u8;
+                  default = null;
+                  example = 16;
+                  description = ''
+                    Specifies prefix length. The prefix list will be applied if
+                    the prefix length is greater than or equal to the ge prefix length.
+                  '';
+                };
+              };
+            })
+          )
+        )
+        # TODO ${afi} prefix-list ${name} description
+      )
+    );
+    default = null;
+    description = ''
+      ip prefix-list provides the most powerful prefix based filtering mechanism. In addition to access-list
+      functionality, ip prefix-list has prefix length range specification and sequential number specification.
+      You can add or delete prefix based filters to arbitrary points of prefix-list using sequential number
+      specification. See
+      [docs.frrouting.org/en/latest/filter.html#ip-prefix-list](https://docs.frrouting.org/en/latest/filter.html#ip-prefix-list).
+    '';
+  };
+
+  config = {
+    # TODO ensure action matches types.enum [ "permit" "deny" ];
+    # TODO ensure seq matches types.ints.u32 validates 1-4294967295
+
+    #assertions = [
+    #  {
+    #    assertion = false;
+    #    message = "TODO";
+    #  }
+    #];
+
+    services.frr.config = lib.concatStringsSep "" (
+      lib.lists.concatMap (
+        afi:
+        lib.lists.concatMap (
+          name:
+          lib.lists.concatMap (
+            seq:
+            lib.lists.map (
+              action:
+              let
+                comments = lib.pipe cfg.${afi}.${name}.${seq}.${action}.comments [
+                  (lib.splitString "\n")
+                  (lib.filter (v: v != ""))
+                  (map (v: "! ${v}\n"))
+                  (lib.concatStringsSep "\n")
+                ];
+                prefix = cfg.${afi}.${name}.${seq}.${action}.prefix;
+                le = toString cfg.${afi}.${name}.${seq}.${action}.le;
+                ge = toString cfg.${afi}.${name}.${seq}.${action}.ge;
+                opt =
+                  (lib.optionalString (le != "") " le ${le}") + (lib.optionalString (ge != "") " ge ${ge}") + "\n";
+              in
+              "${comments}" + "${afi} prefix-list ${name} seq ${seq} ${action} ${prefix}${opt}"
+            ) (builtins.attrNames cfg.${afi}.${name}.${seq})
+          ) (builtins.attrNames cfg.${afi}.${name})
+        ) (builtins.attrNames cfg.${afi})
+      ) (builtins.attrNames cfg)
+    );
+  };
+}
