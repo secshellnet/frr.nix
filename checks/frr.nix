@@ -17,7 +17,10 @@ pkgs.testers.nixosTest {
       settings = {
         access-list."bgp as-path".bogon-asns = {
           "10".permit = {
-            comments = "a list of ASNs that should not appear in the default free zone";
+            comments = [
+              "a list of ASNs that should not appear in the default free zone"
+              "e. g. transition, documentation and private asn"
+            ];
             value = "23456";
           };
           "11".permit.value = "64496-131071";
@@ -45,10 +48,17 @@ pkgs.testers.nixosTest {
         route-maps = {
           export = {
             permit."10".match = "ipv6 address prefix-list own-6";
-            deny."100".comments = "do not advertise other prefixes";
+            deny."100".comments = ''
+              do not advertise other prefixes
+              the peer should not accept them anyway
+            '';
           };
           import = {
             deny = {
+              "5".match = [
+                "as-path own-asns"
+                "ipv6 address prefix-list own-6"
+              ];
               "10".match = "as-path bogon-asns";
               "11".match = "as-path own-asns";
               "20".match = "ipv6 address prefix-list own-6";

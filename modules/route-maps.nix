@@ -7,6 +7,8 @@ let
     types.attrsWith {
       inherit elemType placeholder;
     };
+
+  inherit (import ./utils.nix { inherit lib; }) mkComment mkEntry;
 in
 {
   options.services.frr.settings.route-maps = mkOption {
@@ -16,7 +18,7 @@ in
           types.submodule ({
             options = {
               comments = mkOption {
-                type = with types; lines;
+                type = with types; either lines (listOf lines);
                 default = "";
                 example = "ensure own prefixes have own as in AS-PATH";
                 description = ''
@@ -24,7 +26,7 @@ in
                 '';
               };
               match = mkOption {
-                type = with types; lines;
+                type = with types; either lines (listOf lines);
                 default = "";
                 example = ''
                   as-path OWN_AS
@@ -38,7 +40,7 @@ in
                 '';
               };
               set = mkOption {
-                type = with types; lines;
+                type = with types; either lines (listOf lines);
                 default = "";
                 example = ''
                   table 10
@@ -51,7 +53,7 @@ in
                 '';
               };
               extraConfig = mkOption {
-                type = with types; lines;
+                type = with types; either lines (listOf lines);
                 default = "";
                 example = "continue 15";
                 description = ''
@@ -120,24 +122,17 @@ in
           lib.lists.map (
             seq:
             let
-              linesToList =
-                lines:
-                lib.pipe lines [
-                  (lib.splitString "\n")
-                  (lib.filter (v: v != ""))
-                ];
-
-              comments = linesToList cfg.${name}.${action}.${seq}.comments;
-              match = linesToList cfg.${name}.${action}.${seq}.match;
-              set = linesToList cfg.${name}.${action}.${seq}.set;
-              extraConfig = linesToList cfg.${name}.${action}.${seq}.extraConfig;
+              comments = mkComment cfg.${name}.${action}.${seq}.comments;
+              match = mkEntry cfg.${name}.${action}.${seq}.match "  match ";
+              set = mkEntry cfg.${name}.${action}.${seq}.set "  set ";
+              extraConfig = mkEntry cfg.${name}.${action}.${seq}.extraConfig "  ";
             in
             (
-              "${lib.concatStringsSep "\n" (map (v: "! ${v}\n") comments)}"
+              "${comments}"
               + "route-map ${name} ${action} ${seq}\n"
-              + "${lib.concatStringsSep "\n" (map (v: "  match ${v}\n") match)}"
-              + "${lib.concatStringsSep "\n" (map (v: "  set ${v}\n") set)}"
-              + "${lib.concatStringsSep "\n" (map (v: "  ${v}\n") extraConfig)}"
+              + "${match}"
+              + "${set}"
+              + "${extraConfig}"
               + "exit\n"
             )
           ) (builtins.attrNames cfg.${name}.${action})

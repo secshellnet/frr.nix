@@ -7,6 +7,8 @@ let
     types.attrsWith {
       inherit elemType placeholder;
     };
+
+  inherit (import ./utils.nix { inherit lib; }) mkComment;
 in
 {
   options.services.frr.settings.prefix-list = mkOption {
@@ -17,7 +19,7 @@ in
             types.submodule ({
               options = {
                 comments = mkOption {
-                  type = types.lines;
+                  type = with types; either lines (listOf lines);
                   default = "";
                   example = "define own prefixes";
                   description = ''
@@ -86,12 +88,7 @@ in
             lib.lists.map (
               action:
               let
-                comments = lib.pipe cfg.${afi}.${name}.${seq}.${action}.comments [
-                  (lib.splitString "\n")
-                  (lib.filter (v: v != ""))
-                  (map (v: "! ${v}\n"))
-                  (lib.concatStringsSep "\n")
-                ];
+                comments = mkComment cfg.${afi}.${name}.${seq}.${action}.comments;
                 prefix = cfg.${afi}.${name}.${seq}.${action}.prefix;
                 le = toString cfg.${afi}.${name}.${seq}.${action}.le;
                 ge = toString cfg.${afi}.${name}.${seq}.${action}.ge;
