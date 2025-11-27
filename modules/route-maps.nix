@@ -104,16 +104,6 @@ in
   };
 
   config = {
-    # TODO ensure action matches types.enum [ "permit" "optimization" "deny" ];
-    # TODO ensure seq matches types.ints.u16 validates 1-65535
-
-    #assertions = [
-    #  {
-    #    assertion = false;
-    #    message = "TODO";
-    #  }
-    #];
-
     services.frr.config = lib.concatStringsSep "!\n" (
       lib.lists.concatMap (
         name:

@@ -54,7 +54,6 @@ in
             })
           )
         )
-        # TODO ${afi} prefix-list ${name} description
       )
     );
     default = null;
@@ -68,16 +67,6 @@ in
   };
 
   config = {
-    # TODO ensure action matches types.enum [ "permit" "deny" ];
-    # TODO ensure seq matches types.ints.u32 validates 1-4294967295
-
-    #assertions = [
-    #  {
-    #    assertion = false;
-    #    message = "TODO";
-    #  }
-    #];
-
     services.frr.config = lib.concatStringsSep "" (
       lib.lists.concatMap (
         afi:
