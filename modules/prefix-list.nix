@@ -99,19 +99,19 @@ in
         assertion = builtins.match "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$" name != null;
         message = "Invalid name for prefix-list ${name}";
       }) names)
-      #++ map (
-      #  name:
-      #  (lib.lists.concatMap
-      #    (seq: {
-      #      assertion = builtins.isInt seq && seq >= 1 && seq <= 4294967295;
-      #      message = "Invalid seq number for prefix-list ${name} (${seq})";
-      #    })
-      #    (
-      #      (getAttrsKeyWithoutNullValues cfg.${name}.deny) ++ (getAttrsKeyWithoutNullValues cfg.${name}.permit)  # TODO add ip / ipv6
-      #    )
-      #  )
-      #) names
-      ;
+    #++ map (
+    #  name:
+    #  (lib.lists.concatMap
+    #    (seq: {
+    #      assertion = builtins.isInt seq && seq >= 1 && seq <= 4294967295;
+    #      message = "Invalid seq number for prefix-list ${name} (${seq})";
+    #    })
+    #    (
+    #      (getAttrsKeyWithoutNullValues cfg.${name}.deny) ++ (getAttrsKeyWithoutNullValues cfg.${name}.permit)  # TODO add ip / ipv6
+    #    )
+    #  )
+    #) names
+    ;
 
     services.frr.config = lib.concatStringsSep "" (
       lib.lists.concatMap (

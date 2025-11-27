@@ -40,5 +40,6 @@ rec {
 
   mkComment = raw: mkEntry raw "! ";
 
-  getAttrsKeyWithoutNullValues = c: if c == null then [] else builtins.attrNames (lib.filterAttrs (_: v: v != null) c);
+  getAttrsKeyWithoutNullValues =
+    c: if c == null then [ ] else builtins.attrNames (lib.filterAttrs (_: v: v != null) c);
 }
