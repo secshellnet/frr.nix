@@ -2,7 +2,7 @@
 let
   cfg = config.services.frr.settings.route-maps;
   inherit (lib) mkOption types;
-  inherit (import ./utils.nix { inherit lib; }) mkComment mkEntry;
+  inherit (import ./utils.nix { inherit lib; }) mkComment mkEntry getAttrsKeyWithoutNullValues;
 
   attrsWith' =
     placeholder: elemType:
@@ -114,6 +114,32 @@ in
   };
 
   config = {
+    assertions =
+      let
+        names = builtins.attrNames cfg;
+      in
+      (map (name: {
+        assertion = builtins.match "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$" name != null;
+        message = "Invalid name for route-map ${name}";
+      }) names)
+      ++ builtins.concatLists (map (
+        name:
+        (map
+          (seq: let
+            seqNum = lib.toInt seq;
+          in {
+            assertion = lib.isInt seqNum && seqNum >= 1 && seqNum <= 65535;
+            message = "Invalid seq number for route-map ${name} (${seq})";
+          })
+          (
+            (getAttrsKeyWithoutNullValues cfg.${name}.deny)
+            ++ (getAttrsKeyWithoutNullValues cfg.${name}.permit)
+            #++ (getAttrsKeyWithoutNullValues cfg.${name}.optimization)
+          )
+        )
+      ) names)
+      ;
+
     services.frr.config = lib.concatStringsSep "!\n" (
       lib.lists.concatMap (
         name:
@@ -135,9 +161,9 @@ in
               + "${extraConfig}"
               + "exit\n"
             )
-          ) (builtins.attrNames cfg.${name}.${action})
-        ) (builtins.attrNames (lib.filterAttrs (_: v: v != null) cfg.${name}))
-      ) (builtins.attrNames cfg)
+          ) (getAttrsKeyWithoutNullValues cfg.${name}.${action})
+        ) (getAttrsKeyWithoutNullValues cfg.${name})
+      ) (getAttrsKeyWithoutNullValues cfg)
     );
   };
 }

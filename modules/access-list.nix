@@ -2,7 +2,7 @@
 let
   cfg = config.services.frr.settings.access-list;
   inherit (lib) mkOption types;
-  inherit (import ./utils.nix { inherit lib; }) mkComment;
+  inherit (import ./utils.nix { inherit lib; }) mkComment getAttrsKeyWithoutNullValues;
 
   attrsWith' =
     placeholder: elemType:
@@ -73,6 +73,23 @@ in
   };
 
   config = {
+    assertions =
+      let
+        names = (getAttrsKeyWithoutNullValues cfg.ip) ++ (getAttrsKeyWithoutNullValues cfg.ipv6);
+      in
+      (map (name: {
+        assertion = builtins.match "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$" name != null;
+        message = "Invalid name for access-list ${name}";
+      }) names)
+      #++ map (
+      #  name:
+      #  (lib.lists.concatMap (seq: {
+      #    assertion = builtins.isInt seq && seq >= 1 && seq <= 4294967295;
+      #    message = "Invalid seq number for access-list ${name} (${seq})";
+      #  }) ((getAttrsKeyWithoutNullValues cfg.${name}))) # TODO add ip / ipv6
+      #) names
+      ;
+
     services.frr.config = lib.concatStringsSep "" (
       lib.lists.concatMap (
         type:
@@ -95,10 +112,10 @@ in
                 value = cfg.${type}.${name}.${seq}.${action}.value;
               in
               "${comments}" + "${fixedType}access-list ${name} seq ${seq} ${action} ${value}\n"
-            ) (builtins.attrNames (lib.filterAttrs (_: v: v != null) cfg.${type}.${name}.${seq}))
-          ) (builtins.attrNames cfg.${type}.${name})
-        ) (builtins.attrNames cfg.${type})
-      ) (builtins.attrNames (lib.filterAttrs (_: v: v != null) cfg))
+            ) (getAttrsKeyWithoutNullValues cfg.${type}.${name}.${seq})
+          ) (getAttrsKeyWithoutNullValues cfg.${type}.${name})
+        ) (getAttrsKeyWithoutNullValues cfg.${type})
+      ) (getAttrsKeyWithoutNullValues cfg)
     );
   };
 }
