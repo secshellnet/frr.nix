@@ -50,7 +50,7 @@ let
             '';
           };
           le = mkOption {
-            type = with types; nullOr ints.u8;
+            type = with types; addCheck (nullOr ints.u8) (x: x == null || x >= 0 && x <= 128);
             default = null;
             example = 24;
             description = ''
@@ -59,7 +59,7 @@ let
             '';
           };
           ge = mkOption {
-            type = with types; nullOr ints.u8;
+            type = with types; addCheck (nullOr ints.u8) (x: x == null || x >= 0 && x <= 128);
             default = null;
             example = 16;
             description = ''
