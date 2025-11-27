@@ -2,60 +2,84 @@
 let
   cfg = config.services.frr.settings.prefix-list;
   inherit (lib) mkOption types;
+  inherit (import ./utils.nix { inherit lib; }) mkComment;
+
   attrsWith' =
     placeholder: elemType:
     types.attrsWith {
       inherit elemType placeholder;
     };
 
-  inherit (import ./utils.nix { inherit lib; }) mkComment;
+  plOption = mkOption {
+    type =
+      with types;
+      (nullOr (
+        attrsWith' "name" (
+          nullOr (
+            attrsWith' "seq" (
+              nullOr (submodule {
+                options = {
+                  permit = innerOption;
+                  deny = innerOption;
+                };
+              })
+            )
+          )
+        )
+      ));
+    default = null;
+  };
+
+  innerOption = mkOption {
+    type =
+      with types;
+      nullOr (submodule {
+        options = {
+          comments = mkOption {
+            type = with types; either lines (listOf lines);
+            default = "";
+            example = "define own prefixes";
+            description = ''
+              String that are being added as comments before the route-map.
+            '';
+          };
+          prefix = mkOption {
+            type = types.str;
+            description = ''
+              The prefix.
+            '';
+          };
+          le = mkOption {
+            type = with types; nullOr ints.u8;
+            default = null;
+            example = 24;
+            description = ''
+              Specifies prefix length. The prefix list will be applied if
+              the prefix length is less than or equal to the le prefix length.
+            '';
+          };
+          ge = mkOption {
+            type = with types; nullOr ints.u8;
+            default = null;
+            example = 16;
+            description = ''
+              Specifies prefix length. The prefix list will be applied if
+              the prefix length is greater than or equal to the ge prefix length.
+            '';
+          };
+        };
+      });
+    default = null;
+  };
 in
 {
   options.services.frr.settings.prefix-list = mkOption {
-    type = attrsWith' "afi" (
-      attrsWith' "name" (
-        attrsWith' "seq" (
-          attrsWith' "action" (
-            types.submodule ({
-              options = {
-                comments = mkOption {
-                  type = with types; either lines (listOf lines);
-                  default = "";
-                  example = "define own prefixes";
-                  description = ''
-                    String that are being added as comments before the route-map.
-                  '';
-                };
-                prefix = mkOption {
-                  type = types.str;
-                  description = ''
-                    The prefix.
-                  '';
-                };
-                le = mkOption {
-                  type = with types; nullOr ints.u8;
-                  default = null;
-                  example = 24;
-                  description = ''
-                    Specifies prefix length. The prefix list will be applied if
-                    the prefix length is less than or equal to the le prefix length.
-                  '';
-                };
-                ge = mkOption {
-                  type = with types; nullOr ints.u8;
-                  default = null;
-                  example = 16;
-                  description = ''
-                    Specifies prefix length. The prefix list will be applied if
-                    the prefix length is greater than or equal to the ge prefix length.
-                  '';
-                };
-              };
-            })
-          )
-        )
-      )
-    );
+    type = types.submodule ({
+      options = {
+        ip = plOption;
+        ipv6 = plOption;
+      };
+    });
     default = null;
     description = ''
       ip prefix-list provides the most powerful prefix based filtering mechanism. In addition to access-list
@@ -85,10 +109,10 @@ in
                   (lib.optionalString (le != "") " le ${le}") + (lib.optionalString (ge != "") " ge ${ge}") + "\n";
               in
               "${comments}" + "${afi} prefix-list ${name} seq ${seq} ${action} ${prefix}${opt}"
-            ) (builtins.attrNames cfg.${afi}.${name}.${seq})
+            ) (builtins.attrNames (lib.filterAttrs (_: v: v != null) cfg.${afi}.${name}.${seq}))
           ) (builtins.attrNames cfg.${afi}.${name})
         ) (builtins.attrNames cfg.${afi})
-      ) (builtins.attrNames cfg)
+      ) (builtins.attrNames (lib.filterAttrs (_: v: v != null) cfg))
     );
   };
 }

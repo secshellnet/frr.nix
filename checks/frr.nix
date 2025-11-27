@@ -15,19 +15,23 @@ pkgs.testers.nixosTest {
     services.frr = {
       bgpd.enable = true;
       settings = {
-        access-list."bgp as-path".bogon-asns = {
-          "10".permit = {
-            comments = [
-              "a list of ASNs that should not appear in the default free zone"
-              "e. g. transition, documentation and private asn"
-            ];
-            value = "23456";
+        access-list = {
+          ip.upstreams."10".permit.value = "192.0.2.1";
+          ipv6.upstreams-6."10".permit.value = "2001:db8::1";
+          bgp_as-path.bogon-asns = {
+            "10".permit = {
+              comments = [
+                "a list of ASNs that should not appear in the default free zone"
+                "e. g. transition, documentation and private asn"
+              ];
+              value = "23456";
+            };
+            "11".permit.value = "64496-131071";
+            "12".permit.value = "4200000000-4294967295";
           };
-          "11".permit.value = "64496-131071";
-          "12".permit.value = "4200000000-4294967295";
         };
         prefix-list.ipv6 = {
-          "own-6" = {
+          own-6 = {
             "10".permit = {
               prefix = "2001:db8::/48";
               le = 128;
@@ -38,8 +42,8 @@ pkgs.testers.nixosTest {
               le = 48;
             };
           };
-          "default-route-6"."10".permit.prefix = "::/0";
-          "too-small-6"."10".permit = {
+          default-route-6."10".permit.prefix = "::/0";
+          too-small-6."10".permit = {
             comments = "/48 is minimum for ipv6 on dfz";
             prefix = "::/0";
             ge = 49;
