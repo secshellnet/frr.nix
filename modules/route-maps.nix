@@ -98,15 +98,17 @@ let
 in
 {
   options.services.frr.settings.route-maps = mkOption {
-    type = attrsWith' "name" (
-      with types;
-      nullOr (submodule {
-        options = {
-          permit = rmOption;
-          optimization = rmOption;
-          deny = rmOption;
-        };
-      })
+    type = types.nullOr (
+      attrsWith' "name" (
+        with types;
+        nullOr (submodule {
+          options = {
+            permit = rmOption;
+            optimization = rmOption;
+            deny = rmOption;
+          };
+        })
+      )
     );
     default = null;
     description = ''
@@ -115,7 +117,7 @@ in
     '';
   };
 
-  config = {
+  config = lib.mkIf (cfg != null) {
     assertions =
       let
         names = builtins.attrNames cfg;

@@ -74,12 +74,14 @@ let
 in
 {
   options.services.frr.settings.prefix-list = mkOption {
-    type = types.submodule ({
-      options = {
-        ip = plOption;
-        ipv6 = plOption;
-      };
-    });
+    type = types.nullOr (
+      types.submodule ({
+        options = {
+          ip = plOption;
+          ipv6 = plOption;
+        };
+      })
+    );
     default = null;
     description = ''
       ip prefix-list provides the most powerful prefix based filtering mechanism. In addition to access-list
@@ -90,7 +92,7 @@ in
     '';
   };
 
-  config = {
+  config = lib.mkIf (cfg != null) {
     assertions =
       let
         names = (getAttrsKeyWithoutNullValues cfg.ip) ++ (getAttrsKeyWithoutNullValues cfg.ipv6);

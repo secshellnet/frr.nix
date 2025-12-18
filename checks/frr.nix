@@ -99,8 +99,8 @@ pkgs.testers.nixosTest {
     machine.wait_for_unit("frr.service")
     print(machine.succeed("vtysh -c 'show run'"))
     # TODO validate
-    machine.succeed("vtysh -c 'show ipv6 prefix-list own-6 json' | ${lib.getExe pkgs.jq}")
-    machine.succeed("vtysh -c 'show route-map import json' | ${lib.getExe pkgs.jq}")
-    machine.succeed("vtysh -c 'show route-map export json' | ${lib.getExe pkgs.jq}")
+    print(machine.succeed("vtysh -c 'show ipv6 prefix-list own-6 json' | ${lib.getExe pkgs.jq}"))
+    print(machine.succeed("vtysh -c 'show route-map import json' | ${lib.getExe pkgs.jq}"))
+    print(machine.succeed("vtysh -c 'show route-map export json' | ${lib.getExe pkgs.jq}"))
   '';
 }

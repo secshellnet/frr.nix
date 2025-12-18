@@ -59,20 +59,22 @@ let
 in
 {
   options.services.frr.settings.access-list = mkOption {
-    type = types.submodule ({
-      options = {
-        ip = alOption "ipv4";
-        ipv6 = alOption "ipv6";
-        bgp_as-path = alOption "bgp as-path";
-      };
-    });
+    type = types.nullOr (
+      types.submodule ({
+        options = {
+          ip = alOption "ipv4";
+          ipv6 = alOption "ipv6";
+          bgp_as-path = alOption "bgp as-path";
+        };
+      })
+    );
     default = null;
     description = ''
       [docs.frrouting.org/en/latest/filter.html#ip-access-list](https://docs.frrouting.org/en/latest/filter.html#ip-access-list).
     '';
   };
 
-  config = {
+  config = lib.mkIf (cfg != null) {
     assertions =
       let
         names = (getAttrsKeyWithoutNullValues cfg.ip) ++ (getAttrsKeyWithoutNullValues cfg.ipv6);
