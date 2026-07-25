@@ -29,6 +29,7 @@
     {
       nixosModules = rec {
         frr = ./modules;
+        common = ./modules/common;
         default = frr;
       };
 
